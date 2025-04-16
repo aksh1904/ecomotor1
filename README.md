@@ -1,2 +1,2 @@
-# ecomotor1
-ECOMOTOR
+# YaataYaat
+Just another mobility platform :)

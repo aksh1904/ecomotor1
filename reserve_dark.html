@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            padding: 0;
+            background-image: url('map_dark.png'); /* Replace with the path to your image */
+            background-size: cover; /* Ensures the image covers the entire body */
+            background-repeat: no-repeat; /* Prevents the image from repeating */
+            background-attachment: fixed; /* Keeps the background image fixed during scrolling */
+            background-position: center;
+            backdrop-filter: blur(5px);
+        }
+        .container {
+            width: 375px;
+            margin: 50px auto;
+            background-color: rgb(0, 0, 0);
+            color: white;
+            border-radius: 20px;
+            box-shadow: 0 0 10px rgba(170, 167, 167, 0.1);
+            overflow: hidden;
+        }
+        .map-section {
+            background-color: #E7E9EB;
+            padding: 5px;
+            position: relative;
+            height: 450px;
+            border-bottom: 1px solid #ccc;
+            overflow: hidden;
+        }
+        .map-section img {
+            width: 100%;
+            height: 150%;
+            border-radius: 20px;
+        }
+        .location-info {
+            padding: 10px;
+            background-color: black;
+            border-bottom: 1px solid #ccc;
+        }
+        .location-info div {
+            margin: 5px 0;
+        }
+        .route-info {
+            padding: 10px;
+        }
+        .route-info div {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .route-info .pickup-info {
+            font-size: 14px;
+            color: green;
+        }
+        .route-info .drop-info {
+            font-size: 14px;
+            color: #666;
+        }
+        .driver-info {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-size: 16px;
+        }
+        .driver-details {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #ccc;
+        }
+        .driver-details img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .driver-details div {
+            flex-grow: 1;
+        }
+        .driver-details .driver-rating {
+            font-size: 14px;
+            color: #c0c0c0;
+        }
+        .pin-info {
+            text-align: center;
+            padding: 15px;
+            background-color: #000000;
+            color: white;
+            font-size: 18px;
+            border-bottom: 1px solid #cccccc00;
+        }
+        .pin-info span {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .chat-section {
+            padding: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .chat-section input {
+            flex-grow: 1;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            background-color: rgb(60, 60, 60); /* Change background color to black */
+            color: white; /* Change text color to white */
+        }
+        .chat-section input::placeholder {
+            color: white; /* Change placeholder text color to white */
+        }
+        .chat-section button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 10px;
+            margin-left: 10px;
+        }
+        .light-mode-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            background-color: #c4c4c4;
+            color: rgb(7, 7, 7);
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #map {
+            display: none;
+            height: 100%;
+            width: 100%;
+        }
+        .toggle-map-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.3s ease;
+        }
+        .toggle-map-btn:hover {
+            background-color: #45a049;
+        }
+        .toggle-map-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Request permission to show notifications
+        document.addEventListener("DOMContentLoaded", function() {
+            if (Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+            // Show notification when page is opened
+            if (Notification.permission === "granted") {
+                showNotification("Welcome!", "Your cab has been booked successfully", "cab-icon.png");
+    
+                // Show another notification after 115 seconds
+                setTimeout(function() {
+                    showNotification("Cab Arrived!", "Your cab has arrived", "cab-icon.png");
+                }, 11500); // 115 seconds in milliseconds
+            }
+        });
+    
+        function showNotification(title, body, icon) {
+            new Notification(title, {
+                body: body,
+                icon: icon, // Optional: replace with an icon path
+                badge: icon, // Optional: smaller icon for the notification
+            });
+        }
+    </script>
+    <script>
+        function readDriverInfo() {
+            const pickupInfo = document.querySelector('.pickup-info').innerText;
+            const dropInfo = document.querySelector('.drop-info').innerText;
+            const driverInfo = document.querySelector('.driver-info').innerText;
+            const pinInfo = document.querySelector('.pin-info span').innerText;
+            const driverName = document.querySelector('.driver-details strong').innerText;
+            const driverRating = document.querySelector('.driver-rating').innerText;
+            const vehicleInfo = document.querySelector('.driver-details p:nth-of-type(2)').innerText;
+            const co2Emission = document.querySelector('.driver-details p:nth-of-type(3)').innerText;
+
+            const text = `
+                ${pickupInfo}. 
+                ${dropInfo}. 
+                Your driver's name is ${driverName} with ${driverRating}, driving ${vehicleInfo}.
+                PIN for this ride is ${pinInfo}.
+                If you could not hear the details, please refresh the page.
+            `;
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            window.speechSynthesis.speak(utterance);
+        }
+        function switchToLightMode() {
+            window.location.href = 'reserve.html';
+        }
+
+        let mapInitialized = false;
+
+        function initMap() {
+            return new Promise((resolve, reject) => {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(position => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        const currentLocation = [lat, lng];
+
+                        const map = L.map('map').setView(currentLocation, 15);
+
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        }).addTo(map);
+
+                        L.marker(currentLocation).addTo(map)
+                            .bindPopup('Current Location')
+                            .openPopup();
+
+                        resolve();
+                    }, () => {
+                        alert('Geolocation failed');
+                        reject();
+                    });
+                } else {
+                    alert('Geolocation is not supported by this browser.');
+                    reject();
+                }
+            });
+        }
+
+        async function toggleMap() {
+            const mapSection = document.querySelector('#map');
+            const toggleButton = document.querySelector('.toggle-map-btn');
+
+            if (mapSection.style.display === 'none') {
+                toggleButton.disabled = true;
+                toggleButton.innerText = 'Fetching...';
+
+                mapSection.style.display = 'block';
+                if (!mapInitialized) {
+                    try {
+                        await initMap();
+                        mapInitialized = true;
+                    } catch (error) {
+                        console.error('Error initializing map:', error);
+                    }
+                }
+
+                toggleButton.disabled = false;
+                toggleButton.innerText = 'Hide Map';
+            } else {
+                mapSection.style.display = 'none';
+                toggleButton.innerText = 'Show Map';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            readDriverInfo();
+        });
+        
+    </script>
+</head>
+<body>
+
+    <div class="container">
+        <button class="light-mode-btn" onclick="switchToLightMode()">Light Mode</button>
+        <!-- Map Section -->
+        <div class="map-section">
+            <div id="map"></div>
+            
+            <img src="green-map.png" alt="Map">
+        </div>
+        <button class="toggle-map-btn" onclick="toggleMap()">Show Map</button>
+        
+        <!-- Route and Pickup Info -->
+        <div class="route-info">
+            <div>
+                <span class="pickup-info">Pickup Spot: 3 Min Away</span>
+                <span class="drop-info">Destination: 15 Min</span>
+            </div>
+        </div>
+
+        <!-- Driver Status -->
+        <div class="driver-info">
+            Aditya Ranjan Jha is on the way
+        </div>
+
+        <!-- PIN Information -->
+        <div class="pin-info">
+            PIN for this ride: <span>4014</span>
+        </div>
+
+        <!-- Driver Details -->
+        <div class="driver-details">
+            <img src="ranjan.png" alt="Driver">
+            <div>
+                <strong>Aditya Ranjan Jha</strong>
+                <p class="driver-rating">Rating: 4.5 ⭐</p>
+                <p>Swift Dzire | MH65TD8964</p>
+                <p>117 g/km CO2 Emission</p>
+            </div>
+            <img src="cab-icon.png" alt="Car" style="width: 60px;">
+        </div>
+
+        <!-- Chat Section -->
+        <div class="chat-section">
+            <input type="text" placeholder="Message Aditya Ranjan">
+            <button>Send</button>
+        </div>
+    </div>
+
+</body>
+</html>
